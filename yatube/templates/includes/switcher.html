@@ -1,0 +1,10 @@
+{% if user.is_authenticated %}
+  <div class="row my-3">
+    <ul class="nav nav-tabs">
+    {% with "includes/nav_item.html" as nav_item_template %}
+      {% include nav_item_template with action_url="posts:index" nav_item_val="Все авторы" %}
+      {% include nav_item_template with action_url="posts:follow_index" nav_item_val="Избранные авторы" %}
+    {% endwith %}
+    </ul>
+  </div>
+{% endif %}

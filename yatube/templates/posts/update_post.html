@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактировать пост{% endblock %}
+{% block content %}
+  {% include "includes/base_form.html" with card_header="Редактировать пост" is_create_or_edit=True button="Сохранить" action_url="posts:post_edit" arg=form.instance.pk %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Технологии{% endblock %}
+{% block content %}
+<div class="row">
+  <h2>Технологии:</h2>
+  <aside class="col-12 col-md-3">
+    <ul class="list-group list-group-flush">
+    {% for tool in tools %}
+      {% if forloop.counter|divisibleby:"2" %}
+        <li class="list-group-item bg-primary text-white">
+      {% else %}
+        <li class="list-group-item">
+      {% endif %}
+          {{ tool }}
+        </li>
+    {% endfor %}
+  </aside>
+  <article class="col-12 col-md-9">
+    <p>Здесь описаны технологии, использованные для создания данного сайта.</p>
+  </article>
+</div>
+{% endblock %}

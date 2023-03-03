@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}
+  Зарегистрироваться
+{% endblock %}
+
+{% block content %}
+{% load user_filters %}
+  {% include "includes/base_form.html" with card_header="Зарегистрироваться" button="Зарегистрироваться" action_url="users:signup" %}
+{% endblock %}

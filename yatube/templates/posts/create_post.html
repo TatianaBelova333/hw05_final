@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Новый пост{% endblock %}
+{% block content %}
+  {% include "includes/base_form.html" with card_header="Новый пост" is_create_or_edit=True button="Добавить" action_url="posts:post_create" %}
+{% endblock %}

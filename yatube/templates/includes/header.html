@@ -1,0 +1,29 @@
+{% load static %}
+<header>
+  <nav class="navbar navbar-light" style="background-color: lightskyblue">
+    <div class="container">
+      <a class="navbar-brand" href="{% url 'posts:index' %}">
+        <img src="{% static 'img/logo.png' %}" width="30" height="30"
+          class="d-inline-block align-top" alt="">
+        <span style="color:red">Ya</span>tube
+      </a>
+      <ul class="nav nav-pills">
+      {% with "includes/nav_item.html" as nav_item_template %}
+        {% include nav_item_template with action_url="about:author" nav_item_val="Об авторе" %}
+        {% include nav_item_template with action_url="about:tech" nav_item_val="Технологии" %}
+      {% if user.is_authenticated %}
+        {% include nav_item_template with action_url="posts:post_create" nav_item_val="Новая запись" %}
+        {% include nav_item_template with action_url="users:password_change" nav_item_val="Изменить пароль" %}
+        {% include nav_item_template with action_url="users:logout" nav_item_val="Выйти" %}
+        <li>
+          Пользователь: {{ user.username }}
+        </li>
+      {% else %}
+        {% include nav_item_template with action_url="users:login" nav_item_val="Войти" %}
+        {% include nav_item_template with action_url="users:signup" nav_item_val="Регистрация" %}
+      {% endif %}
+      {% endwith %}
+      </ul>
+    </div>
+  </nav>      
+</header>
