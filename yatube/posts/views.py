@@ -1,16 +1,15 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render, redirect
-from django.views.decorators.cache import cache_page
+from django.core.exceptions import PermissionDenied
 
-from core.utility.utils import get_page_obj
+from core.utility.utils import get_page_obj, remove_hashtag_links
 from .forms import PostForm, CommentForm
 from .models import Group, Post, Follow
 
 User = get_user_model()
 
 
-@cache_page(20)
 def index(request):
     """
     Display the index page with posts (:model:`posts.Post` instances)
@@ -28,6 +27,28 @@ def index(request):
         request=request,
         template_name=template,
         context=context,
+    )
+
+
+#  ради эксперимента
+def hashtag_posts(request, hashtag):
+    """
+    Display posts by hashtags.
+
+    """
+    template = 'posts/hashtag_index.html'
+    post_list = Post.objects.select_related(
+        'author', 'group'
+    ).filter(text__icontains=f'#{hashtag}').all()
+    page_obj = get_page_obj(request=request, obj=post_list)
+
+    return render(
+        request=request,
+        template_name=template,
+        context={
+            'page_obj': page_obj,
+            'hashtag': hashtag,
+        },
     )
 
 
@@ -71,10 +92,9 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     author_posts = author.posts.select_related('group').all()
     page_obj = get_page_obj(request=request, obj=author_posts)
-    author_followers = Follow.objects.filter(
-        author=author,
-    ).values_list('user', flat=True)
-    following = request.user.pk in author_followers
+
+    following = request.user.is_authenticated and Follow.objects.filter(
+        user=request.user, author=author).exists()
 
     context = {
         'author': author,
@@ -153,18 +173,15 @@ def post_edit(request, post_id):
         Post.objects.select_related('group', 'author'),
         pk=post_id
     )
-
+    post.text = remove_hashtag_links(post.text)
     if request.user != post.author:
-        return redirect(
-            'posts:post_detail',
-            post_id=post_id,
-        )
+        raise PermissionDenied()
+
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
         instance=post
     )
-
     if form.is_valid():
         post.save()
         return redirect(
@@ -185,7 +202,7 @@ def add_comment(request, post_id):
     Add comments to posts by authoorised users.
 
     """
-    post = Post.objects.get(pk=post_id)
+    post = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST or None)
 
     if form.is_valid():
@@ -207,13 +224,10 @@ def follow_index(request):
 
     """
     current_user = request.user
-    followed_authors = Follow.objects.filter(
-        user=current_user
-    ).values_list('author', flat=True)
-
     post_list = Post.objects.select_related(
         'author', 'group'
-    ).filter(author__in=followed_authors)
+    ).filter(author__following__user=request.user)
+
     page_obj = get_page_obj(request=request, obj=post_list)
 
     context = {
@@ -235,11 +249,8 @@ def profile_follow(request, username):
     """
     author = get_object_or_404(User, username=username)
     user = request.user
-    author_followers = Follow.objects.filter(
-        author=author,
-    ).values_list('user', flat=True)
-    if user != author and user.pk not in author_followers:
-        Follow.objects.create(user=request.user, author=author)
+    if user != author:
+        Follow.objects.get_or_create(user=request.user, author=author)
 
     return redirect(
         'posts:profile',
@@ -258,7 +269,7 @@ def profile_unfollow(request, username):
         author=author,
     ).values_list('user', flat=True)
     if request.user.pk in author_followers:
-        Follow.objects.get(user=request.user, author=author).delete()
+        Follow.objects.filter(user=request.user, author=author).delete()
 
     return redirect(
         'posts:profile',

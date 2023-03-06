@@ -27,4 +27,5 @@ urlpatterns = [
         views.profile_unfollow,
         name='profile_unfollow'
     ),
+    path('hashtag/<str:hashtag>/', views.hashtag_posts, name='hashtag'),
 ]

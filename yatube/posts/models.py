@@ -99,7 +99,6 @@ class Post(TextBaseModel):
         'Картинка',
         upload_to='posts/',
         blank=True,
-        null=True,
     )
 
     class Meta(TextBaseModel.Meta):
@@ -136,6 +135,8 @@ class Follow(models.Model):
     Model for users following other users.
 
     """
+    is_cleaned = False
+
     user = models.ForeignKey(
         User,
         related_name='follower',
@@ -159,14 +160,25 @@ class Follow(models.Model):
         author_name = self.author.get_username()
         return f'{user_name} - {author_name}'
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         """
         Raise ValidatioError if the user and the author are
         the same User instance.
 
         """
+        self.is_cleaned = True
         if self.user == self.author:
             raise ValidationError(
                 'Пользователь не может подписаться на самого себя'
             )
-        super().save(*args, **kwargs)
+        super(Follow, self).clean()
+
+    def save(self, *args, **kwargs):
+        """
+        Does not save an Follow instance if the user and the author are
+        the same User instance.
+
+        """
+        if not self.is_cleaned:
+            self.full_clean()
+        super(Follow, self).save(*args, **kwargs)

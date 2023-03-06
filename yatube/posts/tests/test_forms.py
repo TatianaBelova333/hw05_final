@@ -1,5 +1,6 @@
 from http import HTTPStatus
 import shutil
+import tempfile
 
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
@@ -13,7 +14,10 @@ from posts.tests.factories import (PostFactory, GroupFactory,
 from posts.models import Post, Comment
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
+
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostFormTests(TestCase):
     """Test suite for the PostForm form."""
 
@@ -47,7 +51,7 @@ class PostFormTests(TestCase):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_empty_post_form(self):
         """Tests that the empty PostForm form has the required fields."""
@@ -298,19 +302,14 @@ class PostFormTests(TestCase):
             'group': GroupFactory(),
             'image': uploaded,
         }
-        response = self.authorised_user.post(
+
+        self.authorised_user.post(
             reverse(
                 'posts:post_edit', kwargs={'post_id': post_to_update.id}
             ),
             data=form_data,
             follow=True,
         )
-
-        redirect_path = reverse(
-            'posts:post_detail',
-            kwargs={'post_id': post_to_update.id}
-        )
-
         post_attempted_update = Post.objects.get(pk=post_to_update.id)
 
         data = (
@@ -321,17 +320,12 @@ class PostFormTests(TestCase):
             (post_to_update.image, post_attempted_update.image),
         )
 
-        self.assertRedirects(
-            response,
-            redirect_path,
-        )
         for post_to_update, post_attempted_update in data:
             with self.subTest(post_to_update=post_to_update,
                               post_attempted_update=post_attempted_update):
                 self.assertEqual(post_to_update, post_attempted_update)
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
 class CommentFormTests(TestCase):
     """Test suite for the CommentForm form."""
 
@@ -339,7 +333,7 @@ class CommentFormTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
 
-        cls.post = PostFactory(text='Пост')
+        cls.post = PostFactory(text='Пост', image=None)
         cls.user = UserFactory(username='Noname')
         cls.form = CommentForm()
         ObsceneWordFactory.create_batch(size=3)
@@ -350,10 +344,12 @@ class CommentFormTests(TestCase):
         self.authorised_user = Client()
         self.authorised_user.force_login(CommentFormTests.user)
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
+    def test_empty_post_form(self):
+        """Tests that the empty CommentForm form has the required fields."""
+        form = CommentFormTests.form
+        self.assertIn('text', form.fields)
+        self.assertNotIn('id', form.fields)
+        self.assertNotIn('author', form.fields)
 
     def test_comment_create_form_by_unauthorised_user(self):
         """

@@ -1,7 +1,6 @@
 from http import HTTPStatus
-import shutil
 
-from django.test import TestCase, Client, override_settings
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.conf import settings
 from django.core.cache import cache
@@ -9,7 +8,6 @@ from django.core.cache import cache
 from posts.tests.factories import PostFactory, UserFactory
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
 class PostURLTests(TestCase):
     """Tests for the URLs of the `posts` app."""
 
@@ -17,7 +15,7 @@ class PostURLTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.other_user = UserFactory(username='OtherUser')
-        cls.post = PostFactory()
+        cls.post = PostFactory(image=None)
 
         cls.public_url_template = {
             '/': 'posts/index.html',
@@ -29,7 +27,7 @@ class PostURLTests(TestCase):
         cls.private_url_template = {
             '/create/': 'posts/create_post.html',
             f'/posts/{cls.post.pk}/edit/': 'posts/update_post.html',
-            '/follow/': 'posts/follow.html',
+            '/follow/': 'posts/follow.html',   # тесты для follow тоже есть
         }
 
     def setUp(self):
@@ -41,11 +39,6 @@ class PostURLTests(TestCase):
 
         self.authorized_post_author = Client()
         self.authorized_post_author.force_login(PostURLTests.post.author)
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_public_urls_exist_anonymous(self):
         """Test public URLs of the `posts` app for an anonymous user."""
@@ -77,17 +70,6 @@ class PostURLTests(TestCase):
                 response = self.guest_client.get(url, follow=True)
                 self.assertRedirects(response, f'{login_url}?next={url}')
 
-    def test_post_edit_url_redirect_not_author(self):
-        """
-        Test URL redirection of the post_edit url
-        for the request user being not the post author.
-
-        """
-        redirect_url = f'/posts/{PostURLTests.post.pk}/'
-        post_edit_url = f'/posts/{PostURLTests.post.pk}/edit/'
-        response = self.authorized_client.get(post_edit_url, follow=True)
-        self.assertRedirects(response, redirect_url)
-
     def test_add_comment_url_redirect_unathorised(self):
         """
         Test URL redirection of the add_commment url
@@ -110,16 +92,6 @@ class PostURLTests(TestCase):
         response = self.authorized_client.get(url, follow=True)
         self.assertRedirects(response, redirect_url)
 
-    def test_invalid_url_use_custom_404page(self):
-        """
-        Test that an invalid URL returns a 404 custom page.
-        """
-        invalid_url = '/unexisting-page/'
-        template = 'core/404.html'
-        response = self.guest_client.get(invalid_url)
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
-        self.assertTemplateUsed(response, template)
-
     def test_public_urls_use_correct_template_anonymous(self):
         """Test that the public urls use correct HTML-templates."""
         for url, template in PostURLTests.public_url_template.items():
@@ -133,3 +105,25 @@ class PostURLTests(TestCase):
             with self.subTest(url=url):
                 response = self.authorized_post_author.get(url)
                 self.assertTemplateUsed(response, template)
+
+    def test_post_edit_url_forbidden_status_not_author(self):
+        """
+        Test post_edit url by not post author raises 403 error
+        and returns a custom 403 page.
+
+        """
+        post_edit_url = f'/posts/{PostURLTests.post.pk}/edit/'
+        template = 'core/403.html'
+        response = self.authorized_client.get(post_edit_url, follow=True)
+        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)
+        self.assertTemplateUsed(response, template)
+
+    def test_invalid_url_use_custom_404page(self):
+        """
+        Test that an invalid URL returns a 404 custom page.
+        """
+        invalid_url = '/unexisting-page/'
+        template = 'core/404.html'
+        response = self.guest_client.get(invalid_url)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.assertTemplateUsed(response, template)

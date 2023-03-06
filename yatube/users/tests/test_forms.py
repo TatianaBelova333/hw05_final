@@ -1,9 +1,6 @@
-import shutil
-
-from django.test import TestCase, Client, override_settings
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.conf import settings
 
 from users.forms import CreationForm
 from posts.tests.factories import UserFactory
@@ -11,7 +8,6 @@ from posts.tests.factories import UserFactory
 User = get_user_model()
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
 class CreationFormTests(TestCase):
     """Test suite for the CreationForm form."""
 
@@ -25,11 +21,6 @@ class CreationFormTests(TestCase):
 
         self.authorised_user = Client()
         self.authorised_user.force_login(UserFactory())
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_empty_creation_form(self):
         """Tests that the empty CreationForm form has the required fields."""

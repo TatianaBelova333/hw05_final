@@ -1,14 +1,10 @@
-import shutil
-
 from django.urls import reverse
-from django.test import TestCase, Client, override_settings
+from django.test import TestCase, Client
 from django import forms
-from django.conf import settings
 
 from posts.tests.factories import UserFactory
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
 class UsersViewsTests(TestCase):
     """Tests for the pages of the users app."""
 
@@ -34,11 +30,6 @@ class UsersViewsTests(TestCase):
             'users/password_change_done.html': reverse(
                 'users:password_change_done'),
         }
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_public_users_pages_use_correct_template(self):
         """

@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
 from django import forms
 
-from core.utility.utils import hide_obscene_words
-from .models import Post, Comment
+from core.utility.utils import hide_obscene_words, add_hashtag_links
+from posts.models import Post, Comment
 
 User = get_user_model()
 
@@ -19,6 +19,7 @@ class PostForm(forms.ModelForm):
             'text': {'required': 'Кажется, Вы забыли что-то написать'}
         }
 
+    @add_hashtag_links
     @hide_obscene_words()
     def clean_text(self):
         data = self.cleaned_data['text']

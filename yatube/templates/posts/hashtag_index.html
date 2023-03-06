@@ -1,10 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Подписки {{ user.username }}{% endblock %}
+{% block title %}Посты с #{{ hashtag }}{% endblock %}
 {% block content %}
-  {% include 'includes/switcher.html' %}
-  {% load cache %}
-  {% cache 20 follow_index %}
-  <h1>Последние обновления в подписках</h1>
+  <h1>#{{ hashtag }}</h1>
   {% for post in page_obj %}
     {% include 'includes/blog_card.html' with post_group=post.group %}
   {% empty %}
@@ -12,5 +9,4 @@
       <p>Здесь пока нет записей.</p>
     </article>
   {% endfor %}
-  {% endcache %}
 {% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Custom 403{% endblock %}
+{% block content %}
+  <h1>403-Forbidden</h1>
+  <p>Упс, похоже у Вас недостаточно прав</p>
+  <a href="{% url 'posts:index' %}">Вернуться на главную</a><br>
+{% if user.is_authenticated%}
+    <a href="{% url 'posts:profile' user.username %}">Вернуться в профиль</a>
+{% endif %}
+{% endblock %} 

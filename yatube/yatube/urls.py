@@ -5,7 +5,8 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 handler404 = 'core.views.page_not_found'
-handler403 = settings.CSRF_FAILURE_VIEW
+handler403 = 'core.views.permission_denied'
+hander500 = 'core.views.server_failure'
 
 urlpatterns = [
     path('admin/doc/', include('django.contrib.admindocs.urls')),

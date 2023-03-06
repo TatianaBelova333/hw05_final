@@ -1,10 +1,7 @@
 from django.contrib import admin
-from django.contrib import messages
-from django.core.exceptions import ValidationError
 
 from posts.forms import CommentAdminForm
-
-from .models import Post, Group, Comment, Follow
+from posts.models import Post, Group, Comment, Follow
 
 
 class GroupAdmin(admin.ModelAdmin):
@@ -48,19 +45,6 @@ class CommentAdmin(admin.ModelAdmin):
 
 class FollowAdmin(admin.ModelAdmin):
     list_display = ('pk', 'user', 'author')
-
-    def message_user(self, *args):
-        pass
-
-    def save_model(self, request, obj, form, change):
-        try:
-            super().save_model(request, obj, form, change)
-        except ValidationError:
-            messages.add_message(
-                request,
-                messages.INFO,
-                'Пользователь не может подписаться на самого себя',
-            )
 
 
 admin.site.register(Post, PostAdmin)

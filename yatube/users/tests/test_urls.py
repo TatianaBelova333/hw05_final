@@ -1,14 +1,12 @@
 from http import HTTPStatus
-import shutil
 
-from django.test import TestCase, Client, override_settings
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.conf import settings
 
 from posts.tests.factories import UserFactory
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
 class UserURLTests(TestCase):
     """Tests for the URLs of the `users` app."""
 
@@ -29,11 +27,6 @@ class UserURLTests(TestCase):
             '/auth/password_change/': 'users/password_change_form.html',
             '/auth/password_change/done/': 'users/password_change_done.html',
         }
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
         self.guest_client = Client()

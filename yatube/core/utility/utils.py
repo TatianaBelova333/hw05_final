@@ -55,3 +55,36 @@ def hide_obscene_words(
             return text
         return wrapper
     return decorator
+
+
+def add_hashtag_links(func) -> callable:
+    """
+    Find hashtags and add links to them.
+
+    """
+    def wrapper(*args, **kwargs) -> str:
+        text: str = func(*args, **kwargs)
+        pattern = r'(#(?P<word>\w+))'
+        edited_text: str = re.sub(
+            pattern,
+            r'<a href="/hashtag/\g<word>/">#\g<word></a>',
+            text,
+            flags=re.I,
+        )
+        return edited_text
+    return wrapper
+
+
+def remove_hashtag_links(text: str) -> str:
+    """
+    Find hashtags with links and remove links.
+
+    """
+    pattern = r'(?P<link><a.+?>(?P<hashtag>#\w+)</a>)'
+    edited_text: str = re.sub(
+        pattern,
+        r'\g<hashtag>',
+        text,
+        flags=re.I,
+    )
+    return edited_text

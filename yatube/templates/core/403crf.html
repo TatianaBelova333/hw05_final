@@ -1,4 +1,9 @@
 {% extends "base.html" %}
+{% block title %}Custom 403-crf error{% endblock %}
 {% block content %}
-  <h1>Custom CSRF check error. 403</h1>
+  <h1>Упс, что-то пошло не так🤨</h1>
+  <a href="{% url 'posts:index' %}">Идите на главную</a><br>
+{% if user.is_authenticated%}
+    <a href="{% url 'posts:profile' user.username %}">Вернуться в профиль</a>
+{% endif %}
 {% endblock %} 

@@ -1,5 +1,6 @@
 from random import randrange
 import shutil
+import tempfile
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
@@ -14,8 +15,10 @@ from posts.models import Post, Follow
 
 User = get_user_model()
 
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostPagesTests(TestCase):
     """Tests for the views of the `post` app."""
 
@@ -76,7 +79,7 @@ class PostPagesTests(TestCase):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_public_views_use_correct_template_anonymous(self):
         """Test that the public pages use correct HTML-templates."""
@@ -440,8 +443,7 @@ class PostPagesTests(TestCase):
         self.assertNotIn(user, (obj.author for obj in user.follower.all()))
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
-class PaginatorViewsTest(TestCase):
+class PaginatorViewsTests(TestCase):
     """Test suite for the paginator."""
 
     @classmethod
@@ -454,25 +456,34 @@ class PaginatorViewsTest(TestCase):
 
         cls.group = GroupFactory()
         cls.user = UserFactory()
+        cls.another_user = UserFactory(username='another_user')
         cls.posts = PostFactory.create_batch(
             size=cls.batch_size,
             group=cls.group,
-            author=cls.user,
+            author=cls.another_user,
         )
+        FollowFactory(user=cls.user, author=cls.another_user)
+
         cls.reverse_names = (
             reverse('posts:index'),
             reverse('posts:group_posts', kwargs={'slug': cls.group.slug}),
-            reverse('posts:profile', kwargs={'username': cls.user.username}),
+            reverse(
+                'posts:profile', kwargs={'username': cls.another_user.username}
+            ),
+            reverse('posts:follow_index'),
         )
 
     def setUp(self):
         cache.clear()
-        self.guest_client = Client()
 
+        self.authorised_client = Client()
+        self.authorised_client.force_login(PaginatorViewsTests.user)
+
+    # если убрать этот класс, в репозитории появляются временные файлы
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_views_first_page(self):
         """
@@ -480,12 +491,12 @@ class PaginatorViewsTest(TestCase):
         contains the default number of posts.
 
         """
-        for reverse_name in PaginatorViewsTest.reverse_names:
+        for reverse_name in PaginatorViewsTests.reverse_names:
             with self.subTest(reverse_name=reverse_name):
-                response = self.guest_client.get(reverse_name)
+                response = self.authorised_client.get(reverse_name)
                 self.assertEqual(
                     len(response.context['page_obj']),
-                    PaginatorViewsTest.posts_num_on_page,
+                    PaginatorViewsTests.posts_num_on_page,
                 )
 
     def test_views_second_page(self):
@@ -494,39 +505,50 @@ class PaginatorViewsTest(TestCase):
         contains the correct number of posts.
 
         """
-        for reverse_name in PaginatorViewsTest.reverse_names:
+        for reverse_name in PaginatorViewsTests.reverse_names:
             with self.subTest(reverse_name=reverse_name):
-                response = self.guest_client.get(reverse_name + '?page=2')
+                response = self.authorised_client.get(reverse_name + '?page=2')
                 self.assertEqual(
                     len(response.context['page_obj']),
-                    PaginatorViewsTest.extra_num,
+                    PaginatorViewsTests.extra_num,
                 )
 
 
-@override_settings(MEDIA_ROOT=settings.TEMP_MEDIA_ROOT)
-class CacheIndexPageTest(TestCase):
+class CacheIndexPageTests(TestCase):
+    """Test suite for the index page cache."""
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.user = UserFactory(username='random_user')
         cls.group = GroupFactory()
-        PostFactory.create_batch(size=5, author=cls.user, group=cls.group)
+        PostFactory.create_batch(
+            size=15, author=cls.user, group=cls.group, image=None,
+        )
         cls.post_to_be_deleted = PostFactory(
             text='TO BE DELETED',
             author=cls.user,
-            group=cls.group
+            group=cls.group,
+            image=None,
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(settings.TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
         self.guest_client = Client()
 
+        self.authorised_client = Client()
+        self.authorised_client.force_login(CacheIndexPageTests.user)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+
     def test_deleted_data_remain_chached(self):
+        """
+        Test that after deleting a post, it is saved in cache
+        until cache has been cleared.
+
+        """
         first_response = self.guest_client.get(reverse('posts:index'))
         Post.objects.get(pk=self.post_to_be_deleted.pk).delete()
         second_response = self.guest_client.get(reverse('posts:index'))
@@ -534,3 +556,31 @@ class CacheIndexPageTest(TestCase):
         third_response = self.guest_client.get(reverse('posts:index'))
         self.assertEqual(first_response.content, second_response.content)
         self.assertNotEqual(first_response.content, third_response.content)
+
+    def test_different_pages_return_different_cached_content(self):
+        """
+        Test that different pages return different cached content.
+
+        """
+        first_page_response = self.guest_client.get(reverse('posts:index'))
+        second_page_response = self.guest_client.get(
+            reverse('posts:index') + '?page=2',
+        )
+        self.assertNotEqual(
+            first_page_response.content,
+            second_page_response.content,
+        )
+
+    def test_different_users_get_different_cached_content(self):
+        """
+        Test that different users get different cached content.
+
+        """
+        unauthorised_response = self.guest_client.get(reverse('posts:index'))
+        authorised_response = self.authorised_client.get(
+            reverse('posts:index')
+        )
+        self.assertNotEqual(
+            unauthorised_response.content,
+            authorised_response.content,
+        )
