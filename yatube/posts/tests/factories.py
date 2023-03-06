@@ -41,8 +41,7 @@ class PostFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Post
 
-    # text = 'Это тестовый пост для тестирования поста'
-    text = factory.fuzzy.FuzzyText(prefix='Пост', length=150)
+    text = factory.fuzzy.FuzzyText(prefix='Post', length=150)
     author = factory.SubFactory(UserFactory)
     group = factory.SubFactory(GroupFactory)
     pub_date = factory.fuzzy.FuzzyDateTime(

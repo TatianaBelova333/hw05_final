@@ -3,7 +3,7 @@
 {% block content %}
   {% include 'includes/switcher.html' %}
   {% load cache %}
-  {% cache 20 follow_index %}
+  {% cache 20 follow_index page_obj %}
   <h1>Последние обновления в подписках</h1>
   {% for post in page_obj %}
     {% include 'includes/blog_card.html' with post_group=post.group %}

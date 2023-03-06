@@ -1,4 +1,5 @@
 from random import randrange
+import re
 import shutil
 import tempfile
 
@@ -479,7 +480,6 @@ class PaginatorViewsTests(TestCase):
         self.authorised_client = Client()
         self.authorised_client.force_login(PaginatorViewsTests.user)
 
-    # если убрать этот класс, в репозитории появляются временные файлы
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -543,7 +543,7 @@ class CacheIndexPageTests(TestCase):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
-    def test_deleted_data_remain_chached(self):
+    def test_deleted_data_remain_cached(self):
         """
         Test that after deleting a post, it is saved in cache
         until cache has been cleared.
@@ -551,9 +551,12 @@ class CacheIndexPageTests(TestCase):
         """
         first_response = self.guest_client.get(reverse('posts:index'))
         Post.objects.get(pk=self.post_to_be_deleted.pk).delete()
+
         second_response = self.guest_client.get(reverse('posts:index'))
         cache.clear()
+
         third_response = self.guest_client.get(reverse('posts:index'))
+
         self.assertEqual(first_response.content, second_response.content)
         self.assertNotEqual(first_response.content, third_response.content)
 
@@ -563,12 +566,20 @@ class CacheIndexPageTests(TestCase):
 
         """
         first_page_response = self.guest_client.get(reverse('posts:index'))
+
         second_page_response = self.guest_client.get(
             reverse('posts:index') + '?page=2',
         )
+
+        pattern = r'<a href=\"/posts/\d+/\">'
+        first_page_content = first_page_response.content.decode()
+        second_page_content = second_page_response.content.decode()
+        first_page_post_hrefs = re.findall(pattern, first_page_content)
+        second_page_post_hrefs = re.findall(pattern, second_page_content)
+
         self.assertNotEqual(
-            first_page_response.content,
-            second_page_response.content,
+            first_page_post_hrefs,
+            second_page_post_hrefs,
         )
 
     def test_different_users_get_different_cached_content(self):

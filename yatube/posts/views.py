@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render, redirect
 from django.core.exceptions import PermissionDenied
+from django.views.decorators.vary import vary_on_cookie
+from django.views.decorators.cache import cache_page
 
 from core.utility.utils import get_page_obj, remove_hashtag_links
 from .forms import PostForm, CommentForm
@@ -10,6 +12,8 @@ from .models import Group, Post, Follow
 User = get_user_model()
 
 
+@cache_page(20, key_prefix='index_page')
+@vary_on_cookie
 def index(request):
     """
     Display the index page with posts (:model:`posts.Post` instances)
@@ -30,7 +34,6 @@ def index(request):
     )
 
 
-#  ради эксперимента
 def hashtag_posts(request, hashtag):
     """
     Display posts by hashtags.
