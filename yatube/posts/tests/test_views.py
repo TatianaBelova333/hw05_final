@@ -507,7 +507,10 @@ class PaginatorViewsTests(TestCase):
         """
         for reverse_name in PaginatorViewsTests.reverse_names:
             with self.subTest(reverse_name=reverse_name):
-                response = self.authorised_client.get(reverse_name + '?page=2')
+                response = self.authorised_client.get(
+                    reverse_name,
+                    {'page': 2},
+                )
                 self.assertEqual(
                     len(response.context['page_obj']),
                     PaginatorViewsTests.extra_num,
@@ -568,7 +571,8 @@ class CacheIndexPageTests(TestCase):
         first_page_response = self.guest_client.get(reverse('posts:index'))
 
         second_page_response = self.guest_client.get(
-            reverse('posts:index') + '?page=2',
+            reverse('posts:index'),
+            {'page': 2},
         )
 
         pattern = r'<a href=\"/posts/\d+/\">'

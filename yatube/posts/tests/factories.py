@@ -1,7 +1,6 @@
 from datetime import datetime
 from dateutil.tz import UTC
 
-
 from django.contrib.auth import get_user_model
 import factory
 import factory.fuzzy
