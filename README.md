@@ -21,7 +21,7 @@ ___
 ### Запуск проекта в dev-режиме
 - Клонировать репозиторий
 ```
-got clone https://github.com/TatianaBelova333/hw05_final.git
+got clone https://github.com/TatianaBelova333/posts_app.git
 ```
 - Установите и активируйте виртуальное окружение
 ```
